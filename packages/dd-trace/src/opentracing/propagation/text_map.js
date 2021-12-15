@@ -3,14 +3,12 @@
 const pick = require('lodash.pick')
 const id = require('../../id')
 const DatadogSpanContext = require('../span_context')
-const NoopSpanContext = require('../../noop/span_context')
 const log = require('../../log')
 
 const traceKey = 'x-datadog-trace-id'
 const spanKey = 'x-datadog-parent-id'
 const originKey = 'x-datadog-origin'
 const samplingKey = 'x-datadog-sampling-priority'
-const sampleKey = 'x-datadog-sampled'
 const tagsKey = 'x-datadog-tags'
 const baggagePrefix = 'ot-baggage-'
 const b3TraceKey = 'x-b3-traceid'
@@ -36,7 +34,6 @@ class TextMapPropagator {
   inject (spanContext, carrier) {
     carrier[traceKey] = spanContext.toTraceId()
     carrier[spanKey] = spanContext.toSpanId()
-    carrier[sampleKey] = spanContext._traceFlags.sampled ? '1' : '0'
 
     this._injectOrigin(spanContext, carrier)
     this._injectSamplingPriority(spanContext, carrier)
@@ -108,7 +105,7 @@ class TextMapPropagator {
 
     carrier[b3TraceKey] = spanContext._traceId.toString('hex')
     carrier[b3SpanKey] = spanContext._spanId.toString('hex')
-    carrier[b3SampledKey] = spanContext._traceFlags.sampled ? '1' : '0'
+    carrier[b3SampledKey] = spanContext._sampling.priority > 0 ? '1' : '0'
 
     if (spanContext._traceFlags.debug) {
       carrier[b3FlagsKey] = '1'
@@ -124,11 +121,7 @@ class TextMapPropagator {
 
     if (!context) return null
 
-    if (context.traceFlags.sampled !== false) {
-      return new DatadogSpanContext(context)
-    } else {
-      return new NoopSpanContext(context)
-    }
+    return new DatadogSpanContext(context)
   }
 
   _extractContext (carrier) {
@@ -136,9 +129,7 @@ class TextMapPropagator {
   }
 
   _extractDatadogContext (carrier) {
-    const sampled = this._isSampled(carrier[sampleKey])
-
-    return this._extractGenericContext(carrier, traceKey, spanKey, { sampled }, 10)
+    return this._extractGenericContext(carrier, traceKey, spanKey, null, {}, 10)
   }
 
   _extractB3Context (carrier) {
@@ -148,7 +139,15 @@ class TextMapPropagator {
     const debug = b3[b3FlagsKey] === '1'
     const sampled = this._isSampled(b3[b3SampledKey], debug)
 
-    return this._extractGenericContext(b3, b3TraceKey, b3SpanKey, { sampled, debug })
+    const spanContext = this._extractGenericContext(b3, b3TraceKey, b3SpanKey, sampled, { debug })
+
+    if (sampled !== null) {
+      spanContext._sampling = {
+        priority: sampled ? 1 : 0
+      }
+    }
+
+    return spanContext
   }
 
   _extractSqsdContext (carrier) {
@@ -165,14 +164,14 @@ class TextMapPropagator {
     return this._extractDatadogContext(parsed)
   }
 
-  _extractGenericContext (carrier, traceKey, spanKey, traceFlags, radix) {
+  _extractGenericContext (carrier, traceKey, spanKey, sampled, traceFlags, radix) {
     if (carrier[traceKey] && carrier[spanKey]) {
       return {
         traceId: id(carrier[traceKey], radix),
         spanId: id(carrier[spanKey], radix),
         traceFlags
       }
-    } else if (typeof traceFlags.sampled === 'boolean') {
+    } else if (typeof sampled === 'boolean') {
       return {
         traceId: id(),
         spanId: null,

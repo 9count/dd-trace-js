@@ -17,7 +17,6 @@ class DatadogSpanContext extends SpanContext {
     this._sampling = props.sampling || {}
     this._baggageItems = props.baggageItems || {}
     this._traceFlags = props.traceFlags || {}
-    this._traceFlags.sampled = this._traceFlags.sampled !== false
     this._traceFlags.debug = this._traceFlags.debug === true
     this._noop = props.noop || null
     this._trace = props.trace || {

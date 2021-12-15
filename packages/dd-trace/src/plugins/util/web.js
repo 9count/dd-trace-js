@@ -22,6 +22,7 @@ const HTTP_STATUS_CODE = tags.HTTP_STATUS_CODE
 const HTTP_ROUTE = tags.HTTP_ROUTE
 const HTTP_REQUEST_HEADERS = tags.HTTP_REQUEST_HEADERS
 const HTTP_RESPONSE_HEADERS = tags.HTTP_RESPONSE_HEADERS
+const MANUAL_DROP = tags.MANUAL_DROP
 
 const HTTP2_HEADER_AUTHORITY = ':authority'
 const HTTP2_HEADER_SCHEME = ':scheme'
@@ -53,9 +54,8 @@ const web = {
 
     const span = startSpan(tracer, config, req, res, name)
 
-    // TODO: replace this with a REFERENCE_NOOP after we split http/express/etc
     if (!config.filter(req.url)) {
-      span.context()._traceFlags.sampled = false
+      span.setTag(MANUAL_DROP, true)
     }
 
     if (config.service) {
