@@ -1,10 +1,7 @@
 'use strict'
 
-const constants = require('../../src/constants')
 const Config = require('../../src/config')
 const TextMapPropagator = require('../../src/opentracing/propagation/text_map')
-
-const SAMPLE_RATE_METRIC_KEY = constants.SAMPLE_RATE_METRIC_KEY
 
 describe('Span', () => {
   let Span
@@ -144,10 +141,6 @@ describe('Span', () => {
     expect(span.context()._parentId).to.deep.equal('456')
     expect(span.context()._baggageItems).to.deep.equal({ foo: 'bar' })
     expect(span.context()._trace).to.equal(parent._trace)
-  })
-
-  it('should set the sample rate metric from the sampler', () => {
-    expect(span.context()._tags).to.have.property(SAMPLE_RATE_METRIC_KEY, 1)
   })
 
   describe('tracer', () => {

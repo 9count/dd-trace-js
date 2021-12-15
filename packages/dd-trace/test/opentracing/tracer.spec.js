@@ -256,21 +256,6 @@ describe('Tracer', () => {
       expect(span.addTags).to.have.been.calledWith(fields.tags)
     })
 
-    it('should return a noop when the parent is not sampled', () => {
-      tracer = new Tracer(config)
-
-      const parent = new SpanContext({ traceFlags: { sampled: false } })
-
-      fields.references = [
-        new Reference(opentracing.REFERENCE_CHILD_OF, parent)
-      ]
-
-      span = tracer.startSpan('name', fields)
-
-      expect(span.context()).to.have.property('_noop', span)
-      expect(span.context()._traceFlags).to.include({ sampled: false })
-    })
-
     it('should return the same instance when the parent is a noop', () => {
       tracer = new Tracer(config)
 

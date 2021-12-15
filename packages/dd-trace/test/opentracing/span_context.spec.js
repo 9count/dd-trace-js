@@ -72,7 +72,6 @@ describe('SpanContext', () => {
       _sampling: {},
       _baggageItems: {},
       _traceFlags: {
-        sampled: true,
         debug: false
       },
       _noop: null,
